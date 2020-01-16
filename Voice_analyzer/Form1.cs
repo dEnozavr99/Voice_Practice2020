@@ -30,6 +30,8 @@ namespace Voice_analyzer
         //array for amplitude
         float[] amplitude;
 
+        string beepSoundFileName = @"C:\Users\Admin\Desktop\Learning\Pract\Voice\Voice_analyzer\Voice_analyzer\bin\Debug\beep.wav";
+
         List<float> list = new List<float>();
         List<short> list1 = new List<short>();
 
@@ -100,6 +102,15 @@ namespace Voice_analyzer
         {
             try
             {
+                if (Player != null)
+                {
+                    Player.Stop();
+                    Player.Dispose();
+                    Player = null;
+                }
+                Player = new SoundPlayer(beepSoundFileName);
+
+
                 list.Clear();
                 chart1.Series["Series1"].Points.Clear();
                 MessageBox.Show("Start recording");
@@ -117,7 +128,9 @@ namespace Voice_analyzer
                 //initialithing object WaveFileWritter
                 writer = new WaveFileWriter(outputFileName, waveIn.WaveFormat);
                 //begin of the record
+                Player.Play();
                 waveIn.StartRecording();
+                
                
             }
             catch (Exception ex)
@@ -141,6 +154,7 @@ namespace Voice_analyzer
 
         private void button3_Click(object sender, EventArgs e)
         {
+            
             chart1.Series["Series1"].Points.Clear();
             foreach (var i in list)
             {
