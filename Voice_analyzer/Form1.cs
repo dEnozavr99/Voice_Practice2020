@@ -61,12 +61,13 @@ namespace Voice_analyzer
                                             e.Buffer[index + 0]);
                     // to floating point
                     var sample32 = sample / 32768f;
+                    list.Add(sample32);
                     // absolute value 
                     if (sample32 < 0) sample32 = -sample32;
                     // is this the max value?
                     if (sample32 > max) max = sample32;
                 }
-                list.Add(max);
+                //list.Add(max);
             }
         }
 
