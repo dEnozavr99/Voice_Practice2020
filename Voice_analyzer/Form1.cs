@@ -53,30 +53,26 @@ namespace Voice_analyzer
             {
                 //writting incoming data into a file
                 writer.WriteData(e.Buffer, 0, e.BytesRecorded);
-                float max = 0;
+                
 
                 var buffer = new WaveBuffer(e.Buffer);
-                // interpret as 32 bit floating point audio
+                // interpret as 16 bit floating point audio
                 for (int index = 0; index < e.BytesRecorded; index += 2)
                 {
                     short sample = (short)((e.Buffer[index + 1] << 8) |
                                             e.Buffer[index + 0]);
                     // to floating point
                     var sample32 = sample / 32768f;
+
                     list.Add(sample32);
-                    // absolute value 
-                    if (sample32 < 0) sample32 = -sample32;
-                    // is this the max value?
-                    if (sample32 > max) max = sample32;
                 }
-                //list.Add(max);
             }
         }
 
         //stop recording 
         void StopRecording()
         {
-            MessageBox.Show("Stop recording");
+            //MessageBox.Show("Stop recording");
             waveIn.StopRecording();
         }
 
@@ -113,7 +109,7 @@ namespace Voice_analyzer
 
                 list.Clear();
                 chart1.Series["Series1"].Points.Clear();
-                MessageBox.Show("Start recording");
+                //MessageBox.Show("Start recording");
                 isRecording = true;
                 waveIn = new WaveIn();
                 //if we have a default sound recording hardware
@@ -144,8 +140,17 @@ namespace Voice_analyzer
         {
             if (waveIn != null)
             {
+                if (Player != null)
+                {
+                    Player.Stop();
+                    Player.Dispose();
+                    Player = null;
+                }
+                Player = new SoundPlayer(beepSoundFileName);
+
                 isRecording = false;
                 StopRecording();
+                Player.Play();
             }
             
         }
@@ -174,24 +179,5 @@ namespace Voice_analyzer
 
         }
 
-        void OnDataAvailable(object sender, WaveInEventArgs args)
-        {
-            //if (isRecording)
-            //{
-            //    writer.Write(args.Buffer, 0, args.BytesRecorded);
-            //}
-
-            
-            //for (int index = 0; index < args.BytesRecorded / 4; index++)
-            //{
-            //    var sample = buffer.FloatBuffer[index];
-
-            //    // absolute value 
-            //    if (sample < 0) sample = -sample;
-            //    // is this the max value?
-            //    if (sample > max) max = sample;
-            //}
-
-        }
     }
 }
