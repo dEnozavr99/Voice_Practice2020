@@ -141,6 +141,7 @@ namespace Voice_analyzer
 
         private void button3_Click(object sender, EventArgs e)
         {
+            chart1.Series["Series1"].Points.Clear();
             foreach (var i in list)
             {
                 chart1.Series["Series1"].Points.AddY(i);
