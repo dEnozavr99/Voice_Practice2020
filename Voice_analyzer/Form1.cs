@@ -19,6 +19,7 @@ namespace Voice_analyzer
 {
     public partial class Form1 : Form
     {
+        int sampleRate = 44100;
 
         double TwoPi = Math.PI * 2;
         //recording thread
@@ -35,7 +36,7 @@ namespace Voice_analyzer
         string beepSoundFileName = @"C:\Users\Admin\Desktop\Learning\Pract\Voice\Voice_analyzer\Voice_analyzer\bin\Debug\beep.wav";
 
         List<double> list = new List<double>();
-        List<short> list1 = new List<short>();
+        List<double> listFreq = new List<double>();
 
         int it = 0;
 
@@ -49,7 +50,7 @@ namespace Voice_analyzer
         {
             if (this.InvokeRequired)
             {
-                this.BeginInvoke(new EventHandler<WaveInEventArgs>(waveIn_DataAvaible), sender, e);
+                this.BeginInvoke(new EventHandler<WaveInEventArgs>(waveIn_DataAvaible), sender, e); 
             }
             else
             {
@@ -59,15 +60,19 @@ namespace Voice_analyzer
 
                 var buffer = new WaveBuffer(e.Buffer);
                 // interpret as 16 bit floating point audio
+                
                 for (int index = 0; index < e.BytesRecorded; index += 2)
                 {
+                    
                     short sample = (short)((e.Buffer[index + 1] << 8) |
                                             e.Buffer[index + 0]);
                     // to floating point
                     var sample32 = sample / 32768f;
-
-                    list.Add(sample32);
+                    if (sample32 > 0.1 || sample32 < -0.1)
+                        list.Add(sample32);
+                    
                 }
+                
             }
         }
 
@@ -112,17 +117,19 @@ namespace Voice_analyzer
                 list.Clear();
                 chart1.Series["Series1"].Points.Clear();
                 //MessageBox.Show("Start recording");
+                timer1.Enabled = true;
                 isRecording = true;
                 waveIn = new WaveIn();
                 //if we have a default sound recording hardware
                 //notebook`s micro has number 0
                 waveIn.DeviceNumber = 0;
+
                 //add a function to event DataAvaible , appeared when there are some incoming data
                 waveIn.DataAvailable += waveIn_DataAvaible;
                 //add a function for ending record
                 waveIn.RecordingStopped += new EventHandler<StoppedEventArgs>(waveIn_RecordingStopped);
                 //wav-file format setting parametrs dyskr frequency and chanels count
-                waveIn.WaveFormat = new WaveFormat(44100, 1);
+                waveIn.WaveFormat = new WaveFormat(sampleRate, 1);
                 //initialithing object WaveFileWritter
                 writer = new WaveFileWriter(outputFileName, waveIn.WaveFormat);
                 //begin of the record
@@ -140,6 +147,7 @@ namespace Voice_analyzer
 
         private void button2_Click(object sender, EventArgs e)
         {
+            timer1.Enabled = false;
             if (waveIn != null)
             {
                 if (Player != null)
@@ -179,6 +187,8 @@ namespace Voice_analyzer
 
             Player = new SoundPlayer(outputFileName);
             Player.Play();
+            chart1.SaveImage("testSound.bmp", System.Windows.Forms.DataVisualization.Charting.ChartImageFormat.Bmp);
+
         }
 
         
@@ -248,6 +258,20 @@ namespace Voice_analyzer
             }
         }
 
+        private void fft(double[] input, double[] output)
+        {
+            for (int i = 0; i <= input.Length - 1; i++)
+            {
+                double sum = 0;
+                
+                for (int j = 0; j <= input.Length - 1; j++)
+                {
+                    sum = input[j] * Math.Pow(Math.E, (-TwoPi * i * j) / input.Length);
+                }
+                output[i] = sum;
+            }
+        }
+
         //method for finding next power of two from n
         private int nextPowerOf2(int n)
         {
@@ -269,10 +293,14 @@ namespace Voice_analyzer
         private void toolStripSplitButton1_ButtonClick(object sender, EventArgs e)
         {
             chart1.Series["Series1"].Points.Clear();
+            
 
             int arrayLenth = nextPowerOf2(list.Count);
-
+            double dw = sampleRate * 1.0 / arrayLenth * 1.0;
+            
             double[] FurieOut = new double[arrayLenth];
+            
+
 
             for (int i = list.Count - 1; i <= arrayLenth - 1; i++)
             {
@@ -284,19 +312,36 @@ namespace Voice_analyzer
             {
                 list[i] *= hemming;
             }
-            FFTAnalysis(list.ToArray(), FurieOut, list.Count - 1, FurieOut.Length - 1);
-            double max = 0, max1 = 0, max2 = 0;
-            for (int i = 0; i <= (FurieOut.Length - 1) / 2; i++)
+            //FFTAnalysis(list.ToArray(), FurieOut, list.Count - 1, FurieOut.Length - 1);
+            fft(list.ToArray(), FurieOut);
+            int zeroInd = Array.IndexOf(FurieOut, 0);
+            FurieOut = FurieOut.Where((val, idx) => idx != zeroInd).ToArray();
+            double[] frequencyes = new double[FurieOut.Length];
+            //for (int i = 0; i <= FurieOut.Length / 2; i++)
+            //{
+            //    frequencyes[i] = dw * i;
+            //    chart1.Series["Series1"].Points.AddXY(frequencyes[i], FurieOut[i]);
+            //}
+            int ind = 0;
+            frequencyes[ind] = dw * ind;
+            while (frequencyes[ind] <= sampleRate / 2)
             {
-                chart1.Series["Series1"].Points.AddY(FurieOut[i]);
-                if (max < FurieOut[i]) { max = FurieOut[i]; }
-                if ((max1 < FurieOut[i]) && (FurieOut[i] < max)) { max1 = FurieOut[i]; }
-                if ((max2 < FurieOut[i]) && (FurieOut[i] < max) && (FurieOut[i] < max1)) { max2 = FurieOut[i]; }
+                chart1.Series["Series1"].Points.AddXY(frequencyes[ind], FurieOut[ind]);
+                ind++;
+                frequencyes[ind] = dw * ind;
             }
-            textBox1.Text = max.ToString();
-            textBox2.Text = max1.ToString();
-            textBox3.Text = max2.ToString();
+            listFreq = frequencyes.ToList();
         }
+
+        int milisecounds = 0;
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            milisecounds++;
+            toolStripStatusLabel2.Text = milisecounds.ToString();
+        }
+
+        
 
         //private double Hm(int n, int N)
         //{
