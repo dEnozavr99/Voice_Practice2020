@@ -122,7 +122,7 @@ namespace Voice_analyzer
                 //add a function for ending record
                 waveIn.RecordingStopped += new EventHandler<StoppedEventArgs>(waveIn_RecordingStopped);
                 //wav-file format setting parametrs dyskr frequency and chanels count
-                waveIn.WaveFormat = new WaveFormat(8000, 1);
+                waveIn.WaveFormat = new WaveFormat(44100, 1);
                 //initialithing object WaveFileWritter
                 writer = new WaveFileWriter(outputFileName, waveIn.WaveFormat);
                 //begin of the record
@@ -156,9 +156,10 @@ namespace Voice_analyzer
             }
             
         }
-
+        //create player, which will play a wave file
         SoundPlayer Player = null;
 
+        //playback recorded audio
         private void button3_Click(object sender, EventArgs e)
         {
             
@@ -181,7 +182,7 @@ namespace Voice_analyzer
         }
 
         
-
+        //method of fast furie transform
         void FFTAnalysis(double[] AVal, double[] FTvl, int Nvl, int Nft)
         {
             int i, j, n, m, Mmax, Istp;
@@ -247,13 +248,11 @@ namespace Voice_analyzer
             }
         }
 
+        //method for finding next power of two from n
         private int nextPowerOf2(int n)
         {
             int count = 0;
 
-            // First n in the below  
-            // condition is for the 
-            // case where n is 0 
             if (n > 0 && (n & (n - 1)) == 0)
                 return n;
 
@@ -266,6 +265,7 @@ namespace Voice_analyzer
             return 1 << count;
         }
 
+        //
         private void toolStripSplitButton1_ButtonClick(object sender, EventArgs e)
         {
             chart1.Series["Series1"].Points.Clear();
@@ -278,14 +278,44 @@ namespace Voice_analyzer
             {
                 list.Add(0);
             }
-            
 
+            double hemming = (0.54 - 0.46 * Math.Cos((2 * 3.14 * Math.Sqrt(FurieOut.Length)) / (FurieOut.Length - 1)));
+            for (int i = 0; i <= arrayLenth - 1; i++)
+            {
+                list[i] *= hemming;
+            }
             FFTAnalysis(list.ToArray(), FurieOut, list.Count - 1, FurieOut.Length - 1);
-            
+            double max = 0, max1 = 0, max2 = 0;
             for (int i = 0; i <= (FurieOut.Length - 1) / 2; i++)
             {
                 chart1.Series["Series1"].Points.AddY(FurieOut[i]);
+                if (max < FurieOut[i]) { max = FurieOut[i]; }
+                if ((max1 < FurieOut[i]) && (FurieOut[i] < max)) { max1 = FurieOut[i]; }
+                if ((max2 < FurieOut[i]) && (FurieOut[i] < max) && (FurieOut[i] < max1)) { max2 = FurieOut[i]; }
             }
+            textBox1.Text = max.ToString();
+            textBox2.Text = max1.ToString();
+            textBox3.Text = max2.ToString();
         }
+
+        //private double Hm(int n, int N)
+        //{
+        //    return 0.54 - 0.46 * Math.Cos((2 * Math.PI * n) / (N - 1));
+        //}
+
+        //public void Hemming(int intervalCount, int size)
+        //{
+        //    int t = 0;
+        //    for (int i = 0; i <= intervalCount - 1; i++)
+        //    {
+        //        t = 0;
+        //        for (int j = size * i / intervalCount; j <= size * (i + 1) / intervalCount - 1; j++)
+        //        {
+        //            Amplitude[j] *= Hm(t, size / intervalCount);
+        //            t++;
+        //        }
+        //    }
+        //}
+
     }
 }

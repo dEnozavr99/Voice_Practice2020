@@ -39,6 +39,9 @@
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
             this.toolStripSplitButton1 = new System.Windows.Forms.ToolStripSplitButton();
+            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.textBox2 = new System.Windows.Forms.TextBox();
+            this.textBox3 = new System.Windows.Forms.TextBox();
             ((System.ComponentModel.ISupportInitialize)(this.chart1)).BeginInit();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -83,6 +86,7 @@
             this.chart1.Location = new System.Drawing.Point(12, 54);
             this.chart1.Name = "chart1";
             series1.ChartArea = "ChartArea1";
+            series1.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line;
             series1.Legend = "Legend1";
             series1.Name = "Series1";
             this.chart1.Series.Add(series1);
@@ -95,9 +99,9 @@
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripStatusLabel1,
             this.toolStripSplitButton1});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 372);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 431);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(427, 22);
+            this.statusStrip1.Size = new System.Drawing.Size(448, 22);
             this.statusStrip1.TabIndex = 4;
             this.statusStrip1.Text = "statusStrip1";
             // 
@@ -117,11 +121,35 @@
             this.toolStripSplitButton1.Text = "toolStripSplitButton1";
             this.toolStripSplitButton1.ButtonClick += new System.EventHandler(this.toolStripSplitButton1_ButtonClick);
             // 
+            // textBox1
+            // 
+            this.textBox1.Location = new System.Drawing.Point(38, 397);
+            this.textBox1.Name = "textBox1";
+            this.textBox1.Size = new System.Drawing.Size(100, 20);
+            this.textBox1.TabIndex = 5;
+            // 
+            // textBox2
+            // 
+            this.textBox2.Location = new System.Drawing.Point(164, 397);
+            this.textBox2.Name = "textBox2";
+            this.textBox2.Size = new System.Drawing.Size(100, 20);
+            this.textBox2.TabIndex = 6;
+            // 
+            // textBox3
+            // 
+            this.textBox3.Location = new System.Drawing.Point(292, 397);
+            this.textBox3.Name = "textBox3";
+            this.textBox3.Size = new System.Drawing.Size(100, 20);
+            this.textBox3.TabIndex = 7;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(427, 394);
+            this.ClientSize = new System.Drawing.Size(448, 453);
+            this.Controls.Add(this.textBox3);
+            this.Controls.Add(this.textBox2);
+            this.Controls.Add(this.textBox1);
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.chart1);
             this.Controls.Add(this.button3);
@@ -146,6 +174,9 @@
         private System.Windows.Forms.StatusStrip statusStrip1;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
         private System.Windows.Forms.ToolStripSplitButton toolStripSplitButton1;
+        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.TextBox textBox2;
+        private System.Windows.Forms.TextBox textBox3;
     }
 }
 
