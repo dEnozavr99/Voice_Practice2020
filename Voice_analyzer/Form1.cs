@@ -117,7 +117,6 @@ namespace Voice_analyzer
                 list.Clear();
                 chart1.Series["Series1"].Points.Clear();
                 //MessageBox.Show("Start recording");
-                timer1.Enabled = true;
                 isRecording = true;
                 waveIn = new WaveIn();
                 //if we have a default sound recording hardware
@@ -147,7 +146,7 @@ namespace Voice_analyzer
 
         private void button2_Click(object sender, EventArgs e)
         {
-            timer1.Enabled = false;
+    
             if (waveIn != null)
             {
                 if (Player != null)
@@ -258,19 +257,7 @@ namespace Voice_analyzer
             }
         }
 
-        private void fft(double[] input, double[] output)
-        {
-            for (int i = 0; i <= input.Length - 1; i++)
-            {
-                double sum = 0;
-                
-                for (int j = 0; j <= input.Length - 1; j++)
-                {
-                    sum = input[j] * Math.Pow(Math.E, (-TwoPi * i * j) / input.Length);
-                }
-                output[i] = sum;
-            }
-        }
+       
 
         //method for finding next power of two from n
         private int nextPowerOf2(int n)
@@ -293,15 +280,11 @@ namespace Voice_analyzer
         private void toolStripSplitButton1_ButtonClick(object sender, EventArgs e)
         {
             chart1.Series["Series1"].Points.Clear();
-            
 
             int arrayLenth = nextPowerOf2(list.Count);
             double dw = sampleRate * 1.0 / arrayLenth * 1.0;
-            
             double[] FurieOut = new double[arrayLenth];
             
-
-
             for (int i = list.Count - 1; i <= arrayLenth - 1; i++)
             {
                 list.Add(0);
@@ -312,10 +295,7 @@ namespace Voice_analyzer
             {
                 list[i] *= hemming;
             }
-            //FFTAnalysis(list.ToArray(), FurieOut, list.Count - 1, FurieOut.Length - 1);
-            fft(list.ToArray(), FurieOut);
-            int zeroInd = Array.IndexOf(FurieOut, 0);
-            FurieOut = FurieOut.Where((val, idx) => idx != zeroInd).ToArray();
+            FFTAnalysis(list.ToArray(), FurieOut, list.Count - 1, FurieOut.Length - 1);
             double[] frequencyes = new double[FurieOut.Length];
             //for (int i = 0; i <= FurieOut.Length / 2; i++)
             //{
@@ -333,13 +313,12 @@ namespace Voice_analyzer
             listFreq = frequencyes.ToList();
         }
 
-        int milisecounds = 0;
-
-        private void timer1_Tick(object sender, EventArgs e)
+        void Framing()
         {
-            milisecounds++;
-            toolStripStatusLabel2.Text = milisecounds.ToString();
+
         }
+
+        
 
         
 
@@ -364,3 +343,10 @@ namespace Voice_analyzer
 
     }
 }
+/*
+ * нормування тривалості слова
+ * 1 берем що всі слова із запасом 1с і ділимо на 100
+ * взяти тестовий сигнал/ записати тестовий сигнал
+ * спитати Юрія Степановича Мочульського
+ * вибрати розмір фреймів 16(+/-8)мс
+*/
