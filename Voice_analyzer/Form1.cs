@@ -68,7 +68,7 @@ namespace Voice_analyzer
                                             e.Buffer[index + 0]);
                     // to floating point
                     var sample32 = sample / 32768f;
-                    if (sample32 > 0.1 || sample32 < -0.1)
+                    //if (sample32 > 0.1 || sample32 < -0.1)
                         list.Add(sample32);
                     
                 }
@@ -311,11 +311,27 @@ namespace Voice_analyzer
                 frequencyes[ind] = dw * ind;
             }
             listFreq = frequencyes.ToList();
+            Framing();
         }
+
+        const int FrameSize = 512;
+        double[,] framedSound;
+        int k = 0;
 
         void Framing()
         {
+            int height = list.Count / (FrameSize / 2) - 1;
 
+            framedSound = new double[height, FrameSize];
+            for (int i = 0; i < height; i++)
+            {
+                for (int j = 0; j < FrameSize; j++)
+                {
+                    framedSound[i, j] = list[k];
+                    k++;
+                }
+                k -= 256;
+            }
         }
 
         
