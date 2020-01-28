@@ -13,13 +13,13 @@ using NAudio.FileFormats;
 using NAudio.CoreAudioApi;
 using NAudio;
 using System.Media;
-
+using System.Linq;
 
 namespace Voice_analyzer
 {
     public partial class Form1 : Form
     {
-        int sampleRate = 44100;
+        int sampleRate = 16000;
 
         double TwoPi = Math.PI * 2;
         //recording thread
@@ -39,7 +39,9 @@ namespace Voice_analyzer
         List<double> listFreq = new List<double>();
 
         int it = 0;
+        
 
+        int k = 0;
         public Form1()
         {
             InitializeComponent();
@@ -68,7 +70,7 @@ namespace Voice_analyzer
                                             e.Buffer[index + 0]);
                     // to floating point
                     var sample32 = sample / 32768f;
-                    //if (sample32 > 0.1 || sample32 < -0.1)
+                    if (sample32 > 0.1 || sample32 < -0.1)
                         list.Add(sample32);
                     
                 }
@@ -276,7 +278,29 @@ namespace Voice_analyzer
             return 1 << count;
         }
 
+        double[][] samples = new double[3][];
+
+        void readFromFile(string path)
+        {
+            char delimetr = ' ';
+            string tempLine = "";
+            StreamReader file = new System.IO.StreamReader(path);
+            int counter = 0;
+
+            while((tempLine = file.ReadLine()) != null)
+            {
+                string[] nums = tempLine.Split(delimetr);
+                samples[counter] = Array.ConvertAll<string, double>(nums, Double.Parse);
+                counter++;
+            }
+
+        }
+
         //
+        double[][] framedSound;
+        double[] h = new double[12] 
+        { 300, 517.33, 781.90, 1103.97, 1496.04, 1973.32, 2554.33, 3261.62, 4122.63, 5170.76, 6446.70, 8000};
+
         private void toolStripSplitButton1_ButtonClick(object sender, EventArgs e)
         {
             chart1.Series["Series1"].Points.Clear();
@@ -290,49 +314,131 @@ namespace Voice_analyzer
                 list.Add(0);
             }
 
-            double hemming = (0.54 - 0.46 * Math.Cos((2 * 3.14 * Math.Sqrt(FurieOut.Length)) / (FurieOut.Length - 1)));
-            for (int i = 0; i <= arrayLenth - 1; i++)
-            {
-                list[i] *= hemming;
-            }
-            FFTAnalysis(list.ToArray(), FurieOut, list.Count - 1, FurieOut.Length - 1);
-            double[] frequencyes = new double[FurieOut.Length];
-            //for (int i = 0; i <= FurieOut.Length / 2; i++)
+
+           
+            double hemming = 0;
+
+            //FFTAnalysis(list.ToArray(), FurieOut, list.Count - 1, FurieOut.Length - 1);
+
+            //for (int i = 0; i <= FurieOut.Length - 1; i++)
             //{
-            //    frequencyes[i] = dw * i;
-            //    chart1.Series["Series1"].Points.AddXY(frequencyes[i], FurieOut[i]);
+            //    hemming = (0.54 - 0.46 * Math.Cos((2 * 3.14 * i) / (FurieOut.Length - 1)));
+            //    FurieOut[i] *= hemming;
             //}
-            int ind = 0;
-            frequencyes[ind] = dw * ind;
-            while (frequencyes[ind] <= sampleRate / 2)
-            {
-                chart1.Series["Series1"].Points.AddXY(frequencyes[ind], FurieOut[ind]);
-                ind++;
-                frequencyes[ind] = dw * ind;
-            }
-            listFreq = frequencyes.ToList();
-            Framing();
-        }
 
-        const int FrameSize = 512;
-        double[,] framedSound;
-        int k = 0;
+            //int height = 63;
+            //int FrameSize = (2 * list.Count) / (height + 1);
 
-        void Framing()
-        {
+            int FrameSize = 512;
             int height = list.Count / (FrameSize / 2) - 1;
 
-            framedSound = new double[height, FrameSize];
+            framedSound = new double[height][];
             for (int i = 0; i < height; i++)
             {
+                framedSound[i] = new double[FrameSize];
                 for (int j = 0; j < FrameSize; j++)
                 {
-                    framedSound[i, j] = list[k];
+                    framedSound[i][j] = list[k];
                     k++;
                 }
                 k -= 256;
             }
+
+            double[][] framedSpectr = new double[height][];
+            for (int i = 0; i < height; i++)
+            {
+                framedSpectr[i] = new double[FrameSize];
+               
+                for (int j = 0; j < FrameSize; j++)
+                {
+                    hemming = 0.54 - 0.46 * Math.Cos(2 * Math.PI * j / (FrameSize - 1));
+                    framedSound[i][j] *= hemming;
+                }
+                FFTAnalysis(framedSound[i], framedSpectr[i], FrameSize, FrameSize);
+            }
+
+            int[] f = new int[h.Length];
+            for (int i = 0; i < h.Length; i++)
+            {
+                f[i] = (int)Math.Floor((FrameSize + 1) * h[i] / sampleRate);
+            }
+
+            int filtersCount = 10;
+            double[,] Hmk = new double[filtersCount, FrameSize];
+
+            for (int m = 1; m <= filtersCount; m++)
+            {
+                for (int k1 = 0; k1 < FrameSize; k1++)
+                {
+                    if (k1 <= f[m] && k1 >= f[m - 1])
+                    {
+                        Hmk[m - 1, k1] = (k1 - f[m - 1]) / (f[m] - f[m - 1]);
+                    }
+                    else if (k1 > f[m] && k1 <= f[m + 1])
+                    {
+                        Hmk[m - 1, k1] = (f[m + 1] - k1) / (f[m + 1] - f[m]);
+                    }
+                    else
+                    {
+                        Hmk[m - 1, k1] = 0;
+                    }
+                }
+            }
+
+
+            double[] s = new double[filtersCount];
+
+           
+            for (int i1 = 0; i1 < filtersCount; i1++)
+            {
+                double sum = 0;
+                for (int j1 = 0; j1 < FrameSize; j1++)
+                {
+                     sum += Math.Pow(Math.Abs(framedSound[i1][j1]), 2) * Hmk[i1, j1];
+                }
+                s[i1] = Math.Log(sum);            
+            }
+
+            double[] Cosinusi = new double[filtersCount];
+            string Pryvit = @"pryvit.txt";
+            string Vasya = @"vasya.txt";
+            string Find = @"find.txt";
+
+            for (int l = 0; l < filtersCount; l++)
+            {
+                double sum = 0;
+
+                for (int m = 0; m < filtersCount; m++)
+                {
+                    sum = s[m] * Math.Cos(Math.PI * l * (m + 0.5) / filtersCount);
+                }
+                Cosinusi[l] = sum;
+            }
+            bool test = true;
+            readFromFile(@"C:\Users\Admin\Desktop\Learning\Pract\Voice\Voice_analyzer\sample.txt");
+
+            double min = 100000;
+            int vid = -1;
+            for (int i = 0; i < 3; i++)
+            {
+                double sum = 0;
+                for (int j = 0; j < filtersCount; j++)
+                {
+                   sum += Math.Pow((samples[i][j] - Cosinusi[j]),2);
+                }
+               sum = Math.Sqrt(sum);
+                if (min>sum) { vid = i; min = sum; }
+            }
+
+            if (vid == 0) { textBox1.Text = "Привiт"; }
+           else if (vid == 1) { textBox1.Text = "Вася"; }
+           else if (vid == 2) { textBox1.Text = "Знайди"; }
         }
+
+       
+       
+
+    
 
         
 
