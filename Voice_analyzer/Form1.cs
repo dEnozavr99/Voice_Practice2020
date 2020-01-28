@@ -189,7 +189,7 @@ namespace Voice_analyzer
             Player = new SoundPlayer(outputFileName);
             Player.Play();
             chart1.SaveImage("testSound.bmp", System.Windows.Forms.DataVisualization.Charting.ChartImageFormat.Bmp);
-
+            comboBox1.SelectedIndex = 0;
         }
 
         
@@ -400,9 +400,6 @@ namespace Voice_analyzer
             }
 
             double[] Cosinusi = new double[filtersCount];
-            string Pryvit = @"pryvit.txt";
-            string Vasya = @"vasya.txt";
-            string Find = @"find.txt";
 
             for (int l = 0; l < filtersCount; l++)
             {
@@ -414,7 +411,17 @@ namespace Voice_analyzer
                 }
                 Cosinusi[l] = sum;
             }
-            bool test = true;
+
+            using (StreamWriter sw = new StreamWriter(comboBox1.SelectedItem.ToString(), true, Encoding.Default))
+            {
+                for (int i = 0; i < Cosinusi.Length; i++)
+                {
+                    string tmpstr = Cosinusi[i].ToString() + " ";
+                    sw.Write(tmpstr);
+                }
+                sw.WriteLine();
+            }
+            //bool test = true;
             readFromFile(@"C:\Users\Admin\Desktop\Learning\Pract\Voice\Voice_analyzer\sample.txt");
 
             double min = 100000;
@@ -434,34 +441,6 @@ namespace Voice_analyzer
            else if (vid == 1) { textBox1.Text = "Вася"; }
            else if (vid == 2) { textBox1.Text = "Знайди"; }
         }
-
-       
-       
-
-    
-
-        
-
-        
-
-        //private double Hm(int n, int N)
-        //{
-        //    return 0.54 - 0.46 * Math.Cos((2 * Math.PI * n) / (N - 1));
-        //}
-
-        //public void Hemming(int intervalCount, int size)
-        //{
-        //    int t = 0;
-        //    for (int i = 0; i <= intervalCount - 1; i++)
-        //    {
-        //        t = 0;
-        //        for (int j = size * i / intervalCount; j <= size * (i + 1) / intervalCount - 1; j++)
-        //        {
-        //            Amplitude[j] *= Hm(t, size / intervalCount);
-        //            t++;
-        //        }
-        //    }
-        //}
 
     }
 }
