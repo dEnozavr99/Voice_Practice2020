@@ -333,6 +333,7 @@ namespace Voice_analyzer
             int height = list.Count / (FrameSize / 2) - 1;
 
             framedSound = new double[height][];
+            k = 0;
             for (int i = 0; i < height; i++)
             {
                 framedSound[i] = new double[FrameSize];
