@@ -32,16 +32,15 @@ namespace Voice_analyzer
         bool isRecording = false;
         //array for amplitude
         float[] amplitude;
-
+        Stack<double> s = new Stack<double>();
         string beepSoundFileName = @"C:\Users\Admin\Desktop\Learning\Pract\Voice\Voice_analyzer\Voice_analyzer\bin\Debug\beep.wav";
 
         List<double> list = new List<double>();
         List<double> listFreq = new List<double>();
 
         int it = 0;
-        
-
         int k = 0;
+
         public Form1()
         {
             InitializeComponent();
@@ -52,29 +51,28 @@ namespace Voice_analyzer
         {
             if (this.InvokeRequired)
             {
-                this.BeginInvoke(new EventHandler<WaveInEventArgs>(waveIn_DataAvaible), sender, e); 
+                this.BeginInvoke(new EventHandler<WaveInEventArgs>(waveIn_DataAvaible), sender, e);
             }
             else
             {
                 //writting incoming data into a file
-                writer.WriteData(e.Buffer, 0, e.BytesRecorded);
-                
+                writer.Write(e.Buffer, 0, e.BytesRecorded);
 
                 var buffer = new WaveBuffer(e.Buffer);
                 // interpret as 16 bit floating point audio
-                
+
                 for (int index = 0; index < e.BytesRecorded; index += 2)
                 {
-                    
+
                     short sample = (short)((e.Buffer[index + 1] << 8) |
                                             e.Buffer[index + 0]);
                     // to floating point
                     var sample32 = sample / 32768f;
-                    if (sample32 > 0.1 || sample32 < -0.1)
-                        list.Add(sample32);
-                    
+                    //if (sam                           ple32 > 0.1 || sample32 < -0.1)
+                    list.Add(sample32);
+
                 }
-                
+
             }
         }
 
@@ -124,7 +122,6 @@ namespace Voice_analyzer
                 //if we have a default sound recording hardware
                 //notebook`s micro has number 0
                 waveIn.DeviceNumber = 0;
-
                 //add a function to event DataAvaible , appeared when there are some incoming data
                 waveIn.DataAvailable += waveIn_DataAvaible;
                 //add a function for ending record
@@ -136,8 +133,8 @@ namespace Voice_analyzer
                 //begin of the record
                 Player.Play();
                 waveIn.StartRecording();
-                
-               
+
+
             }
             catch (Exception ex)
             {
@@ -148,7 +145,7 @@ namespace Voice_analyzer
 
         private void button2_Click(object sender, EventArgs e)
         {
-    
+
             if (waveIn != null)
             {
                 if (Player != null)
@@ -163,7 +160,7 @@ namespace Voice_analyzer
                 StopRecording();
                 Player.Play();
             }
-            
+
         }
         //create player, which will play a wave file
         SoundPlayer Player = null;
@@ -171,7 +168,7 @@ namespace Voice_analyzer
         //playback recorded audio
         private void button3_Click(object sender, EventArgs e)
         {
-            
+
             chart1.Series["Series1"].Points.Clear();
             toolStripStatusLabel1.Text = list.Count.ToString();
             foreach (var i in list)
@@ -192,7 +189,7 @@ namespace Voice_analyzer
             comboBox1.SelectedIndex = 0;
         }
 
-        
+
         //method of fast furie transform
         void FFTAnalysis(double[] AVal, double[] FTvl, int Nvl, int Nft)
         {
@@ -259,7 +256,7 @@ namespace Voice_analyzer
             }
         }
 
-       
+
 
         //method for finding next power of two from n
         private int nextPowerOf2(int n)
@@ -284,22 +281,36 @@ namespace Voice_analyzer
         {
             char delimetr = ' ';
             string tempLine = "";
-            StreamReader file = new System.IO.StreamReader(path);
+            StreamReader file = new StreamReader(path);
             int counter = 0;
 
-            while((tempLine = file.ReadLine()) != null)
+            while ((tempLine = file.ReadLine()) != null)
             {
                 string[] nums = tempLine.Split(delimetr);
-                samples[counter] = Array.ConvertAll<string, double>(nums, Double.Parse);
+                samples[counter] = Array.ConvertAll(nums, Double.Parse);
                 counter++;
             }
 
         }
 
-        //
         double[][] framedSound;
-        double[] h = new double[12] 
+        double[] h = new double[12]
         { 300, 517.33, 781.90, 1103.97, 1496.04, 1973.32, 2554.33, 3261.62, 4122.63, 5170.76, 6446.70, 8000};
+
+        double MinOf(params double[] p)
+        {
+            double min = double.MaxValue;
+
+            for (int i = 0; i < p.Length; i++)
+            {
+                if (p[i] < min)
+                {
+                    min = p[i];
+                }
+            }
+
+            return min;
+        }
 
         private void toolStripSplitButton1_ButtonClick(object sender, EventArgs e)
         {
@@ -308,26 +319,13 @@ namespace Voice_analyzer
             int arrayLenth = nextPowerOf2(list.Count);
             double dw = sampleRate * 1.0 / arrayLenth * 1.0;
             double[] FurieOut = new double[arrayLenth];
-            
+
             for (int i = list.Count - 1; i <= arrayLenth - 1; i++)
             {
                 list.Add(0);
             }
 
-
-           
             double hemming = 0;
-
-            //FFTAnalysis(list.ToArray(), FurieOut, list.Count - 1, FurieOut.Length - 1);
-
-            //for (int i = 0; i <= FurieOut.Length - 1; i++)
-            //{
-            //    hemming = (0.54 - 0.46 * Math.Cos((2 * 3.14 * i) / (FurieOut.Length - 1)));
-            //    FurieOut[i] *= hemming;
-            //}
-
-            //int height = 63;
-            //int FrameSize = (2 * list.Count) / (height + 1);
 
             int FrameSize = 512;
             int height = list.Count / (FrameSize / 2) - 1;
@@ -349,7 +347,7 @@ namespace Voice_analyzer
             for (int i = 0; i < height; i++)
             {
                 framedSpectr[i] = new double[FrameSize];
-               
+
                 for (int j = 0; j < FrameSize; j++)
                 {
                     hemming = 0.54 - 0.46 * Math.Cos(2 * Math.PI * j / (FrameSize - 1));
@@ -389,15 +387,15 @@ namespace Voice_analyzer
 
             double[] s = new double[filtersCount];
 
-           
+
             for (int i1 = 0; i1 < filtersCount; i1++)
             {
                 double sum = 0;
                 for (int j1 = 0; j1 < FrameSize; j1++)
                 {
-                     sum += Math.Pow(Math.Abs(framedSound[i1][j1]), 2) * Hmk[i1, j1];
+                    sum += Math.Pow(Math.Abs(framedSound[i1][j1]), 2) * Hmk[i1, j1];
                 }
-                s[i1] = Math.Log(sum);            
+                s[i1] = Math.Log(sum);
             }
 
             double[] Cosinusi = new double[filtersCount];
@@ -413,34 +411,251 @@ namespace Voice_analyzer
                 Cosinusi[l] = sum;
             }
 
-            using (StreamWriter sw = new StreamWriter(comboBox1.SelectedItem.ToString(), true, Encoding.Default))
-            {
-                for (int i = 0; i < Cosinusi.Length; i++)
-                {
-                    string tmpstr = Cosinusi[i].ToString() + " ";
-                    sw.Write(tmpstr);
-                }
-                sw.WriteLine();
-            }
-            //bool test = true;
-            readFromFile(@"C:\Users\Admin\Desktop\Learning\Pract\Voice\Voice_analyzer\sample.txt");
+            double[] deltha = new double[filtersCount];
+            double[] delthaDeltha = new double[filtersCount];
 
-            double min = 100000;
-            int vid = -1;
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < filtersCount; i++)
             {
-                double sum = 0;
-                for (int j = 0; j < filtersCount; j++)
+                if (i < 2)
                 {
-                   sum += Math.Pow((samples[i][j] - Cosinusi[j]),2);
+                    deltha[i] = Cosinusi[i + 2];
                 }
-               sum = Math.Sqrt(sum);
-                if (min>sum) { vid = i; min = sum; }
+                else if (i + 2 < filtersCount)
+                {
+                    deltha[i] = Cosinusi[i + 2] - Cosinusi[i - 2];
+                }
+                else
+                {
+                    deltha[i] = -Cosinusi[i - 2];
+                }
             }
 
-            if (vid == 0) { textBox1.Text = "Привiт"; }
-           else if (vid == 1) { textBox1.Text = "Вася"; }
-           else if (vid == 2) { textBox1.Text = "Знайди"; }
+            for (int i = 0; i < filtersCount; i++)
+            {
+                if (i < 2)
+                {
+                    delthaDeltha[i] = deltha[i + 2];
+                }
+                else if (i + 2 < filtersCount)
+                {
+
+                    delthaDeltha[i] = deltha[i + 2] - deltha[i - 2];
+                }
+                else
+                {
+
+                    delthaDeltha[i] = -deltha[i - 2];
+                }
+            }
+
+            if (radioButton2.Checked)
+            {
+                using (StreamWriter sw = new StreamWriter(comboBox1.SelectedItem.ToString(), false, Encoding.Default))
+                {
+                    for (int i = 0; i < filtersCount; i++)
+                    {
+                        if (i != filtersCount - 1)
+                            sw.Write(Cosinusi[i].ToString() + " ");
+                        else
+                            sw.Write(Cosinusi[i].ToString());
+                    }
+                    sw.WriteLine();
+
+                    for (int i = 0; i < filtersCount; i++)
+                    {
+                        if (i != filtersCount - 1)
+                            sw.Write(deltha[i].ToString() + " ");
+                        else
+                            sw.Write(deltha[i].ToString());
+                    }
+                    sw.WriteLine();
+
+                    for (int i = 0; i < filtersCount; i++)
+                    {
+                        if (i != filtersCount - 1)
+                            sw.Write(delthaDeltha[i].ToString() + " ");
+                        else
+                            sw.Write(delthaDeltha[i].ToString());
+                    }
+                }
+
+                System.Diagnostics.Process.Start("notepad.exe", comboBox1.SelectedItem.ToString());
+            }
+
+
+            
+
+
+            if (radioButton1.Checked)
+            {
+                double[] comparison = new double[3];
+                for (int WordsCounter = 0; WordsCounter < comparison.Length; WordsCounter++)
+                {
+
+                    readFromFile(comboBox1.Items[WordsCounter].ToString());
+
+                    double[] template = new double[30];
+                    int iter1 = 0, iter2 = 0;
+                    for (int i = 0; i < template.Length; i++)
+                    {
+                        template[i] = samples[iter1][iter2];
+
+                        if (i == 9 || i == 19)
+                        {
+                            iter1++;
+                        }
+
+                        if (i != 9 && i != 19)
+                        {
+                            iter2++;
+                        }
+                        else
+                        {
+                            iter2 = 0;
+                        }
+                    }
+
+                    double[] inputed = new double[30];
+                    iter1 = 0;
+                    iter2 = 0;
+                    int iter3 = 0;
+
+                    for (int i = 0; i < inputed.Length; i++)
+                    {
+                        if (i <= 9)
+                        {
+                            inputed[i] = Cosinusi[iter1];
+                            iter1++;
+                        }
+                        else if (i <= 19)
+                        {
+                            inputed[i] = deltha[iter2];
+                            iter2++;
+                        }
+                        else
+                        {
+                            inputed[i] = delthaDeltha[iter3];
+                            iter3++;
+                        }
+                    }
+
+                    int n = template.Length;
+                    int m = inputed.Length;
+                    double[,] d = new double[n, m];
+                    double[,] D = new double[n, m];
+                    Stack<double> w = new Stack<double>();
+
+                    for (int i = 0; i < n; i++)
+                    {
+                        for (int j = 0; j < m; j++)
+                        {
+                            d[i, j] = Math.Abs(template[i] - inputed[j]);
+                        }
+                    }
+
+                    D[0, 0] = d[0, 0];
+
+                    for (int i = 1; i < n; i++)
+                    {
+                        D[i, 0] = d[i, 0] + D[i - 1, 0];
+                    }
+
+                    for (int j = 1; j < m; j++)
+                    {
+                        D[0, j] = d[0, j] + D[0, j - 1];
+                    }
+
+                    for (int i = 1; i < n; i++)
+                    {
+                        for (int j = 1; j < m; j++)
+                        {
+                            if (D[i - 1, j - 1] <= D[i - 1, j])
+                            {
+                                if (D[i - 1, j - 1] <= D[i, j - 1])
+                                {
+                                    D[i, j] = d[i, j] + D[i - 1, j - 1];
+                                }
+                                else
+                                {
+                                    D[i, j] = d[i, j] + D[i, j - 1];
+                                }
+                            }
+                            else if (D[i - 1, j] <= D[i, j - 1])
+                            {
+                                D[i, j] = d[i, j] + D[i - 1, j];
+                            }
+                            else
+                            {
+                                D[i, j] = d[i, j] + D[i, j - 1];
+                            }
+
+                        }
+                    }
+
+                    int i1 = n - 1, j1 = m - 1;
+                    double element = D[i1, j1];
+
+                    w.Push(D[i1, j1]);
+
+                    do
+                    {
+                        if (i1 > 0 && j1 > 0)
+                        {
+                            if (D[i1 - 1, j1 - 1] <= D[i1 - 1, j1])
+                            {
+                                if (D[i1 - 1, j1 - 1] <= D[i1, j1 - 1])
+                                {
+                                    i1--;
+                                    j1--;
+                                }
+                                else
+                                    j1--;
+                            }
+                            else if (D[i1 - 1, j1] <= D[i1, j1 - 1])
+                            {
+                                i1--;
+                            }
+                            else
+                            {
+                                j1--;
+                            }
+                        }
+                        else if (i1 == 0)
+                        {
+                            j1--;
+                        }
+                        else
+                        {
+                            i1--;
+                        }
+                        w.Push(D[i1, j1]);
+                    }
+                    while (i1 != 0 || j1 != 0);
+
+                    double sum = 0f;
+                    foreach (double tempVar in w)
+                    {
+                        sum += tempVar;
+                    }
+
+                    comparison[WordsCounter] = sum /= w.Count;
+                }
+                
+                if (comparison[0] == MinOf(comparison))
+                {
+                    textBox1.Text = "Привіт";
+                }
+                else if (comparison[1] == MinOf(comparison))
+                {
+                    textBox1.Text = "Вася";
+                }
+                else if (comparison[2] == MinOf(comparison))
+                {
+                    textBox1.Text = "Знайди";
+                }
+            }
+
+
         }
 
     }
