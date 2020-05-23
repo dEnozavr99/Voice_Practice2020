@@ -33,7 +33,7 @@ namespace Voice_analyzer
         //array for amplitude
         float[] amplitude;
         Stack<double> s = new Stack<double>();
-        string beepSoundFileName = @"C:\Users\Admin\Desktop\Learning\Pract\Voice\Voice_analyzer\Voice_analyzer\bin\Debug\beep.wav";
+        string beepSoundFileName = @"beep.wav";
 
         List<double> list = new List<double>();
         List<double> listFreq = new List<double>();
@@ -481,10 +481,6 @@ namespace Voice_analyzer
 
                 System.Diagnostics.Process.Start("notepad.exe", comboBox1.SelectedItem.ToString());
             }
-
-
-            
-
 
             if (radioButton1.Checked)
             {
