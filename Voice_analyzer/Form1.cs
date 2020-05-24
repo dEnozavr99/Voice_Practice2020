@@ -294,6 +294,7 @@ namespace Voice_analyzer
         }
 
         double[][] framedSound;
+
         double[] h = new double[12]
         { 300, 517.33, 781.90, 1103.97, 1496.04, 1973.32, 2554.33, 3261.62, 4122.63, 5170.76, 6446.70, 8000};
 
@@ -315,6 +316,7 @@ namespace Voice_analyzer
         private void toolStripSplitButton1_ButtonClick(object sender, EventArgs e)
         {
             chart1.Series["Series1"].Points.Clear();
+            textBox1.Text = "";
 
             int arrayLenth = nextPowerOf2(list.Count);
             double dw = sampleRate * 1.0 / arrayLenth * 1.0;
@@ -325,333 +327,450 @@ namespace Voice_analyzer
                 list.Add(0);
             }
 
-            double hemming = 0;
+            //entropia
+            
 
-            int FrameSize = 512;
-            int height = list.Count / (FrameSize / 2) - 1;
+            double hemming = 0;
+            // змінив довжину фрейма з 512 на 128
+            const int FrameSize = 128;
+            // змінив знаходження кількості фреймів
+            //int height = list.Count / (FrameSize / 2) - 1;
+            int height = (list.Count / FrameSize) * 2 - 1;
 
             framedSound = new double[height][];
+
             k = 0;
+
             for (int i = 0; i < height; i++)
             {
                 framedSound[i] = new double[FrameSize];
+
                 for (int j = 0; j < FrameSize; j++)
                 {
-                    framedSound[i][j] = list[k];
+                    //framedSound[i][j] = list[k];
+
+                    //if (i % 2 == 0)
+                    //{
+                    //    chart1.Series[0].Points.AddXY(k, framedSound[i][j] + 1);
+                    //}
+                    //else
+                    //{
+                    //    chart1.Series[1].Points.AddXY(k, framedSound[i][j] - 1);
+                    //}
+                    if (k == 0)
+                    {
+                        framedSound[i][j] = list[k];
+                    }
+                    else
+                        framedSound[i][j] = list[k] - 0.97 * list[k - 1];
                     k++;
                 }
-                k -= 256;
+                k -= FrameSize / 2;
             }
 
-            double[][] framedSpectr = new double[height][];
+            chart1.Series["Series1"].Points.Clear();
+            double[] entropia = new double[height];
             for (int i = 0; i < height; i++)
             {
-                framedSpectr[i] = new double[FrameSize];
-
+                double E1 = 0;
                 for (int j = 0; j < FrameSize; j++)
                 {
-                    hemming = 0.54 - 0.46 * Math.Cos(2 * Math.PI * j / (FrameSize - 1));
-                    framedSound[i][j] *= hemming;
+                    E1 += framedSound[i][j] * Math.Log(Math.Abs(framedSound[i][j]), 2);
                 }
-                FFTAnalysis(framedSound[i], framedSpectr[i], FrameSize, FrameSize);
+                entropia[i] = E1;
+                chart1.Series["Series1"].Points.AddY(E1);
             }
+            int stop1 = 0;
+            int slovo = 0;
 
-            int[] f = new int[h.Length];
-            for (int i = 0; i < h.Length; i++)
+            double[][][] newframedSound = new double[10][][];
+
+            while (stop1 < height - 1)
             {
-                f[i] = (int)Math.Floor((FrameSize + 1) * h[i] / sampleRate);
-            }
-
-            int filtersCount = 10;
-            double[,] Hmk = new double[filtersCount, FrameSize];
-
-            for (int m = 1; m <= filtersCount; m++)
-            {
-                for (int k1 = 0; k1 < FrameSize; k1++)
+                if (Math.Abs(entropia[stop1]) < 0.01) { stop1++; }
+                else
                 {
-                    if (k1 <= f[m] && k1 >= f[m - 1])
+                    int stop2 = 0;
+                    int rozmir = 0;
+                    int shym = 0;
+                    while (stop2 < 5)
                     {
-                        Hmk[m - 1, k1] = (k1 - f[m - 1]) / (f[m] - f[m - 1]);
+                        if (stop1 == height - 1) { break; }
+                        stop2 = 0;
+                        if (Math.Abs(entropia[stop1]) < 0.01)
+                        {
+                            for (int i = stop1; i < stop1 + 5; i++)
+                            {
+                                if (Math.Abs(entropia[stop1]) < 0.01) { stop2++; }
+                            }
+                        }
+                        if (Math.Abs(entropia[stop1]) < 1) { shym++; }
+                        rozmir++;
+                        stop1++;
                     }
-                    else if (k1 > f[m] && k1 <= f[m + 1])
+                    if ((rozmir > 8) && (rozmir != shym))
                     {
-                        Hmk[m - 1, k1] = (f[m + 1] - k1) / (f[m + 1] - f[m]);
+                        newframedSound[slovo] = new double[height][];
+                        for (int i = stop1 - rozmir; i <= stop1; i++)
+                        {
+                            newframedSound[slovo][i] = new double[FrameSize];
+                            for (int j = 0; j < FrameSize; j++)
+                            {
+
+                                newframedSound[slovo][i][j] = framedSound[i][j];
+                            }
+                        }
+                        slovo++;
+                    }
+                }
+            }
+
+            textBox1.Text = slovo.ToString() + " ";
+
+            for (int word = 0; word < slovo; word++)
+            {
+                //this.Refresh();
+                //MessageBox.Show("Signal framed");
+                //chart1.Series[0].Points.Clear();
+                //chart1.Series[1].Points.Clear();
+                for (int i = 0; i < height; i++)
+                {
+                    int starterPos = newframedSound[word][i].Length;
+                    int newSubArrSize = nextPowerOf2(newframedSound[word][i].Length);
+                    Array.Resize(ref newframedSound[word][i], newSubArrSize);
+
+                    for (int j = starterPos; j < newSubArrSize; j++)
+                    {
+                        newframedSound[word][i][j] = 0;
+                    }
+                }
+
+                double[][] framedSpectr = new double[height][];
+
+                for (int i = 0; i < height; i++)
+                {
+                    framedSpectr[i] = new double[FrameSize];
+
+                    for (int j = 0; j < FrameSize; j++)
+                    {
+                        hemming = 0.54 - 0.46 * Math.Cos(2 * Math.PI * j / (FrameSize - 1));
+                        //framedSound[i][j] *= hemming;
+                        newframedSound[word][i][j] *= hemming;
+                    }
+                    //FFTAnalysis(framedSound[i], framedSpectr[i], FrameSize, FrameSize);
+                    FFTAnalysis(newframedSound[word][i], framedSpectr[i], FrameSize, FrameSize);
+
+                    //if (i % 2 == 0)
+                    //{
+                    //    chart1.Series[0].Points.Add(framedSpectr[i]);
+                    //}
+                    //else
+                    //{
+                    //    chart1.Series[1].Points.Add(framedSpectr[i]);
+                    //}
+                }
+
+                //this.Refresh();
+                //MessageBox.Show("Spectr builted");
+                //chart1.Series[0].Points.Clear();
+                //chart1.Series[1].Points.Clear();
+
+                int[] f = new int[h.Length];
+
+                for (int i = 0; i < h.Length; i++)
+                {
+                    f[i] = (int)Math.Floor((FrameSize + 1) * h[i] / sampleRate);
+                }
+
+                int filtersCount = 10;
+                double[,] Hmk = new double[filtersCount, FrameSize];
+
+                for (int m = 1; m <= filtersCount; m++)
+                {
+                    for (int k1 = 0; k1 < FrameSize; k1++)
+                    {
+                        if (k1 <= f[m] && k1 >= f[m - 1])
+                        {
+                            Hmk[m - 1, k1] = (k1 - f[m - 1]) / (f[m] - f[m - 1]);
+                        }
+                        else if (k1 > f[m] && k1 <= f[m + 1])
+                        {
+                            Hmk[m - 1, k1] = (f[m + 1] - k1) / (f[m + 1] - f[m]);
+                        }
+                        else
+                        {
+                            Hmk[m - 1, k1] = 0;
+                        }
+                    }
+                }
+
+
+                double[] s = new double[filtersCount];
+
+
+                for (int i1 = 0; i1 < filtersCount; i1++)
+                {
+                    double sum = 0;
+                    for (int j1 = 0; j1 < FrameSize; j1++)
+                    {
+                        sum += Math.Pow(Math.Abs(framedSound[i1][j1]), 2) * Hmk[i1, j1];
+                    }
+                    s[i1] = Math.Log(sum);
+                }
+
+                double[] Cosinusi = new double[filtersCount];
+
+                for (int l = 0; l < filtersCount; l++)
+                {
+                    double sum = 0;
+
+                    for (int m = 0; m < filtersCount; m++)
+                    {
+                        sum = s[m] * Math.Cos(Math.PI * l * (m + 0.5) / filtersCount);
+                    }
+                    Cosinusi[l] = sum;
+                }
+
+                double[] deltha = new double[filtersCount];
+                double[] delthaDeltha = new double[filtersCount];
+
+                for (int i = 0; i < filtersCount; i++)
+                {
+                    if (i < 2)
+                    {
+                        deltha[i] = Cosinusi[i + 2];
+                    }
+                    else if (i + 2 < filtersCount)
+                    {
+                        deltha[i] = Cosinusi[i + 2] - Cosinusi[i - 2];
                     }
                     else
                     {
-                        Hmk[m - 1, k1] = 0;
-                    }
-                }
-            }
-
-
-            double[] s = new double[filtersCount];
-
-
-            for (int i1 = 0; i1 < filtersCount; i1++)
-            {
-                double sum = 0;
-                for (int j1 = 0; j1 < FrameSize; j1++)
-                {
-                    sum += Math.Pow(Math.Abs(framedSound[i1][j1]), 2) * Hmk[i1, j1];
-                }
-                s[i1] = Math.Log(sum);
-            }
-
-            double[] Cosinusi = new double[filtersCount];
-
-            for (int l = 0; l < filtersCount; l++)
-            {
-                double sum = 0;
-
-                for (int m = 0; m < filtersCount; m++)
-                {
-                    sum = s[m] * Math.Cos(Math.PI * l * (m + 0.5) / filtersCount);
-                }
-                Cosinusi[l] = sum;
-            }
-
-            double[] deltha = new double[filtersCount];
-            double[] delthaDeltha = new double[filtersCount];
-
-            for (int i = 0; i < filtersCount; i++)
-            {
-                if (i < 2)
-                {
-                    deltha[i] = Cosinusi[i + 2];
-                }
-                else if (i + 2 < filtersCount)
-                {
-                    deltha[i] = Cosinusi[i + 2] - Cosinusi[i - 2];
-                }
-                else
-                {
-                    deltha[i] = -Cosinusi[i - 2];
-                }
-            }
-
-            for (int i = 0; i < filtersCount; i++)
-            {
-                if (i < 2)
-                {
-                    delthaDeltha[i] = deltha[i + 2];
-                }
-                else if (i + 2 < filtersCount)
-                {
-
-                    delthaDeltha[i] = deltha[i + 2] - deltha[i - 2];
-                }
-                else
-                {
-
-                    delthaDeltha[i] = -deltha[i - 2];
-                }
-            }
-
-            if (radioButton2.Checked)
-            {
-                using (StreamWriter sw = new StreamWriter(comboBox1.SelectedItem.ToString(), false, Encoding.Default))
-                {
-                    for (int i = 0; i < filtersCount; i++)
-                    {
-                        if (i != filtersCount - 1)
-                            sw.Write(Cosinusi[i].ToString() + " ");
-                        else
-                            sw.Write(Cosinusi[i].ToString());
-                    }
-                    sw.WriteLine();
-
-                    for (int i = 0; i < filtersCount; i++)
-                    {
-                        if (i != filtersCount - 1)
-                            sw.Write(deltha[i].ToString() + " ");
-                        else
-                            sw.Write(deltha[i].ToString());
-                    }
-                    sw.WriteLine();
-
-                    for (int i = 0; i < filtersCount; i++)
-                    {
-                        if (i != filtersCount - 1)
-                            sw.Write(delthaDeltha[i].ToString() + " ");
-                        else
-                            sw.Write(delthaDeltha[i].ToString());
+                        deltha[i] = -Cosinusi[i - 2];
                     }
                 }
 
-                System.Diagnostics.Process.Start("notepad.exe", comboBox1.SelectedItem.ToString());
-            }
-
-            if (radioButton1.Checked)
-            {
-                double[] comparison = new double[3];
-                for (int WordsCounter = 0; WordsCounter < comparison.Length; WordsCounter++)
+                for (int i = 0; i < filtersCount; i++)
                 {
-
-                    readFromFile(comboBox1.Items[WordsCounter].ToString());
-
-                    double[] template = new double[30];
-                    int iter1 = 0, iter2 = 0;
-                    for (int i = 0; i < template.Length; i++)
+                    if (i < 2)
                     {
-                        template[i] = samples[iter1][iter2];
+                        delthaDeltha[i] = deltha[i + 2];
+                    }
+                    else if (i + 2 < filtersCount)
+                    {
 
-                        if (i == 9 || i == 19)
+                        delthaDeltha[i] = deltha[i + 2] - deltha[i - 2];
+                    }
+                    else
+                    {
+
+                        delthaDeltha[i] = -deltha[i - 2];
+                    }
+                }
+
+                if (radioButton2.Checked)
+                {
+                    using (StreamWriter sw = new StreamWriter(comboBox1.SelectedItem.ToString(), false, Encoding.Default))
+                    {
+                        for (int i = 0; i < filtersCount; i++)
                         {
-                            iter1++;
+                            if (i != filtersCount - 1)
+                                sw.Write(Cosinusi[i].ToString() + " ");
+                            else
+                                sw.Write(Cosinusi[i].ToString());
                         }
+                        sw.WriteLine();
 
-                        if (i != 9 && i != 19)
+                        for (int i = 0; i < filtersCount; i++)
                         {
-                            iter2++;
+                            if (i != filtersCount - 1)
+                                sw.Write(deltha[i].ToString() + " ");
+                            else
+                                sw.Write(deltha[i].ToString());
                         }
-                        else
+                        sw.WriteLine();
+
+                        for (int i = 0; i < filtersCount; i++)
                         {
-                            iter2 = 0;
+                            if (i != filtersCount - 1)
+                                sw.Write(delthaDeltha[i].ToString() + " ");
+                            else
+                                sw.Write(delthaDeltha[i].ToString());
                         }
                     }
 
-                    double[] inputed = new double[30];
-                    iter1 = 0;
-                    iter2 = 0;
-                    int iter3 = 0;
+                    System.Diagnostics.Process.Start("notepad.exe", comboBox1.SelectedItem.ToString());
+                }
 
-                    for (int i = 0; i < inputed.Length; i++)
+                if (radioButton1.Checked)
+                {
+                    double[] comparison = new double[3];
+                    for (int WordsCounter = 0; WordsCounter < comparison.Length; WordsCounter++)
                     {
-                        if (i <= 9)
+
+                        readFromFile(comboBox1.Items[WordsCounter].ToString());
+
+                        double[] template = new double[30];
+                        int iter1 = 0, iter2 = 0;
+                        for (int i = 0; i < template.Length; i++)
                         {
-                            inputed[i] = Cosinusi[iter1];
-                            iter1++;
+                            template[i] = samples[iter1][iter2];
+
+                            if (i == 9 || i == 19)
+                            {
+                                iter1++;
+                            }
+
+                            if (i != 9 && i != 19)
+                            {
+                                iter2++;
+                            }
+                            else
+                            {
+                                iter2 = 0;
+                            }
                         }
-                        else if (i <= 19)
+
+                        double[] inputed = new double[30];
+                        iter1 = 0;
+                        iter2 = 0;
+                        int iter3 = 0;
+
+                        for (int i = 0; i < inputed.Length; i++)
                         {
-                            inputed[i] = deltha[iter2];
-                            iter2++;
+                            if (i <= 9)
+                            {
+                                inputed[i] = Cosinusi[iter1];
+                                iter1++;
+                            }
+                            else if (i <= 19)
+                            {
+                                inputed[i] = deltha[iter2];
+                                iter2++;
+                            }
+                            else
+                            {
+                                inputed[i] = delthaDeltha[iter3];
+                                iter3++;
+                            }
                         }
-                        else
+
+                        int n = template.Length;
+                        int m = inputed.Length;
+                        double[,] d = new double[n, m];
+                        double[,] D = new double[n, m];
+                        Stack<double> w = new Stack<double>();
+
+                        for (int i = 0; i < n; i++)
                         {
-                            inputed[i] = delthaDeltha[iter3];
-                            iter3++;
+                            for (int j = 0; j < m; j++)
+                            {
+                                d[i, j] = Math.Abs(template[i] - inputed[j]);
+                            }
                         }
-                    }
 
-                    int n = template.Length;
-                    int m = inputed.Length;
-                    double[,] d = new double[n, m];
-                    double[,] D = new double[n, m];
-                    Stack<double> w = new Stack<double>();
+                        D[0, 0] = d[0, 0];
 
-                    for (int i = 0; i < n; i++)
-                    {
-                        for (int j = 0; j < m; j++)
+                        for (int i = 1; i < n; i++)
                         {
-                            d[i, j] = Math.Abs(template[i] - inputed[j]);
+                            D[i, 0] = d[i, 0] + D[i - 1, 0];
                         }
-                    }
 
-                    D[0, 0] = d[0, 0];
-
-                    for (int i = 1; i < n; i++)
-                    {
-                        D[i, 0] = d[i, 0] + D[i - 1, 0];
-                    }
-
-                    for (int j = 1; j < m; j++)
-                    {
-                        D[0, j] = d[0, j] + D[0, j - 1];
-                    }
-
-                    for (int i = 1; i < n; i++)
-                    {
                         for (int j = 1; j < m; j++)
                         {
-                            if (D[i - 1, j - 1] <= D[i - 1, j])
+                            D[0, j] = d[0, j] + D[0, j - 1];
+                        }
+
+                        for (int i = 1; i < n; i++)
+                        {
+                            for (int j = 1; j < m; j++)
                             {
-                                if (D[i - 1, j - 1] <= D[i, j - 1])
+                                if (D[i - 1, j - 1] <= D[i - 1, j])
                                 {
-                                    D[i, j] = d[i, j] + D[i - 1, j - 1];
+                                    if (D[i - 1, j - 1] <= D[i, j - 1])
+                                    {
+                                        D[i, j] = d[i, j] + D[i - 1, j - 1];
+                                    }
+                                    else
+                                    {
+                                        D[i, j] = d[i, j] + D[i, j - 1];
+                                    }
+                                }
+                                else if (D[i - 1, j] <= D[i, j - 1])
+                                {
+                                    D[i, j] = d[i, j] + D[i - 1, j];
                                 }
                                 else
                                 {
                                     D[i, j] = d[i, j] + D[i, j - 1];
                                 }
-                            }
-                            else if (D[i - 1, j] <= D[i, j - 1])
-                            {
-                                D[i, j] = d[i, j] + D[i - 1, j];
-                            }
-                            else
-                            {
-                                D[i, j] = d[i, j] + D[i, j - 1];
-                            }
 
+                            }
                         }
-                    }
 
-                    int i1 = n - 1, j1 = m - 1;
-                    double element = D[i1, j1];
+                        int i1 = n - 1, j1 = m - 1;
+                        double element = D[i1, j1];
 
-                    w.Push(D[i1, j1]);
+                        w.Push(D[i1, j1]);
 
-                    do
-                    {
-                        if (i1 > 0 && j1 > 0)
+                        do
                         {
-                            if (D[i1 - 1, j1 - 1] <= D[i1 - 1, j1])
+                            if (i1 > 0 && j1 > 0)
                             {
-                                if (D[i1 - 1, j1 - 1] <= D[i1, j1 - 1])
+                                if (D[i1 - 1, j1 - 1] <= D[i1 - 1, j1])
+                                {
+                                    if (D[i1 - 1, j1 - 1] <= D[i1, j1 - 1])
+                                    {
+                                        i1--;
+                                        j1--;
+                                    }
+                                    else
+                                        j1--;
+                                }
+                                else if (D[i1 - 1, j1] <= D[i1, j1 - 1])
                                 {
                                     i1--;
-                                    j1--;
                                 }
                                 else
+                                {
                                     j1--;
+                                }
                             }
-                            else if (D[i1 - 1, j1] <= D[i1, j1 - 1])
-                            {
-                                i1--;
-                            }
-                            else
+                            else if (i1 == 0)
                             {
                                 j1--;
                             }
+                            else
+                            {
+                                i1--;
+                            }
+                            w.Push(D[i1, j1]);
                         }
-                        else if (i1 == 0)
-                        {
-                            j1--;
-                        }
-                        else
-                        {
-                            i1--;
-                        }
-                        w.Push(D[i1, j1]);
-                    }
-                    while (i1 != 0 || j1 != 0);
+                        while (i1 != 0 || j1 != 0);
 
-                    double sum = 0f;
-                    foreach (double tempVar in w)
+                        double sum = 0f;
+                        foreach (double tempVar in w)
+                        {
+                            sum += tempVar;
+                        }
+
+                        comparison[WordsCounter] = sum /= w.Count;
+                    }
+
+                    if (comparison[0] == MinOf(comparison))
                     {
-                        sum += tempVar;
+                        textBox1.Text += "Привіт";
                     }
-
-                    comparison[WordsCounter] = sum /= w.Count;
-                }
-                
-                if (comparison[0] == MinOf(comparison))
-                {
-                    textBox1.Text = "Привіт";
-                }
-                else if (comparison[1] == MinOf(comparison))
-                {
-                    textBox1.Text = "Вася";
-                }
-                else if (comparison[2] == MinOf(comparison))
-                {
-                    textBox1.Text = "Знайди";
+                    else if (comparison[1] == MinOf(comparison))
+                    {
+                        textBox1.Text += "Вася";
+                    }
+                    else if (comparison[2] == MinOf(comparison))
+                    {
+                        textBox1.Text += "Знайди";
+                    }
                 }
             }
-
-
         }
 
     }
